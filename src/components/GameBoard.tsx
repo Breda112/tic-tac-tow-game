@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Home, RotateCcw } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
-import { makeMove as makeOnlineMove } from '../lib/socket';
+import { makeMove as makeOnlineMove, resetGame as resetOnlineGame } from '../lib/socket';
 import { cn } from '../lib/utils';
 
 
@@ -21,11 +21,17 @@ const GameBoard = () => {
     makeMoveWithAI
   } = useGameStore();
 
+  const handleResetGame = () => {
+    if (gameMode == 'online') resetOnlineGame(roomId);
+
+    else resetGame();
+  }
+
 
   const handleCellClick = (i: number, j: number) => {
-  
+
     if (gameOver || (!username && gameMode === 'online')) return;
-  
+
     if (gameMode === 'online') {
       if (!username) return;
       makeOnlineMove(roomId, username, [i, j]);
@@ -50,7 +56,7 @@ const GameBoard = () => {
           </button>
           {gameOver && (
             <button
-              onClick={resetGame}
+              onClick={handleResetGame}
               className="flex items-center text-white hover:text-blue-300 transition-colors"
             >
               <RotateCcw className="w-6 h-6 mr-2" />

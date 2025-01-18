@@ -1,7 +1,10 @@
 import { io } from 'socket.io-client';
 
 // Create socket instance with error handling
-export const socket = io('http://127.0.0.1:5001', {
+
+const API_URL = 'Your_API'; 
+export const socket = io(API_URL, {
+  transports: ['websocket'],
   reconnection: true,
   reconnectionAttempts: 5,
   reconnectionDelay: 1000,
@@ -17,7 +20,6 @@ socket.on('connect_error', (error) => {
 });
 
 export const createRoom = (roomId: string, username: string) => {
-  console.log('Creating room:', { roomId, username });
   socket.emit('create_room', { room_id: roomId, username });
 };
 
@@ -33,5 +35,10 @@ export const makeMove = (roomId: string, username: string, action: [number, numb
 
 export const resetGame = (roomId: string) => {
   console.log('Resetting game:', { roomId });
+  socket.emit('reset_game', { room_id: roomId });
+};
+
+export const leavingRoomGame = (roomId: string) => {
+  console.log('Leave the room:', { roomId });
   socket.emit('reset_game', { room_id: roomId });
 };

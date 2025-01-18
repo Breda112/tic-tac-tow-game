@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { checkWinner, isGameOver } from '../lib/gameLogic';
 import axios from 'axios';
 
-const AI_API_URL = 'http://127.0.0.1:5000/api';// for AI 
+const AI_API_URL = 'Your_API'; 
 
 type Cell = string;
 type Board = Cell[][];
@@ -21,7 +21,7 @@ interface GameState {
   setGameMode: (mode: GameMode) => void;
   setRoomId: (roomId: string) => void;
   makeMove: (row: number, col: number) => void;
-  makeMoveWithAI: (row: number, col: number) => void
+  makeMoveWithAI: (row: number, col: number) => void;
   updateGame: (data: {
     board: Board;
     current_player: Player;
@@ -33,23 +33,23 @@ interface GameState {
 
 const initialBoard: Board = [['', '', ''], ['', '', ''], ['', '', '']];
 
+// Track the first player alternately across sessions
+let firstPlayer: Player = "X";
+
 export const useGameStore = create<GameState>((set, get) => ({
   board: initialBoard,
-  currentPlayer: 'X',
+  currentPlayer: firstPlayer,
   gameMode: null,
   gameOver: false,
   winner: null,
   username: '',
   roomId: '',
 
-
-
   setGameMode: (mode) => set({ gameMode: mode }),
   setUsername: (username) => set({ username }),
   setRoomId: (roomId) => set({ roomId }),
 
   updateGame: (data) => {
-
     set({
       board: data.board,
       currentPlayer: data.current_player,
@@ -58,47 +58,48 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
   },
 
-  makeMove: (row, col) => set((state) => {
-    if (state.board[row][col] !== '' || state.gameOver) return state;
+  makeMove: (row, col) =>
 
-    const newBoard = state.board.map(r => [...r]);
-    newBoard[row][col] = state.currentPlayer;
+    set((state) => {
+      if (state.board[row][col] !== '' || state.gameOver) return state;
 
-    const winner = checkWinner(newBoard);
-    const gameOver = isGameOver(newBoard);
+      const newBoard = state.board.map((r) => [...r]);
+      newBoard[row][col] = state.currentPlayer;
 
+      const winner = checkWinner(newBoard);
+      const gameOver = isGameOver(newBoard);
 
-    return {
-      board: newBoard,
-      currentPlayer: state.currentPlayer === 'X' ? 'O' : 'X',
-      winner,
-      gameOver,
-    };
-  }),
+      return {
+        board: newBoard,
+        currentPlayer: state.currentPlayer === 'X' ? 'O' : 'X',
+        winner,
+        gameOver,
+      };
+    }),
 
-
-  // New Function: Make Move with AI
   makeMoveWithAI: async (row: number, col: number) => {
     const state = get();
-
-    // Player's move
-    if (state.board[row][col] !== '' || state.gameOver) return;
-
     const newBoard = state.board.map((r) => [...r]);
-    newBoard[row][col] = state.currentPlayer;
 
-    const winner = checkWinner(newBoard);
-    const gameOver = isGameOver(newBoard);
+    if (row < 10 || col < 10) {
+      newBoard[row][col] = state.currentPlayer;
 
-    set({
-      board: newBoard,
-      currentPlayer: 'O', // AI always plays 'O'
-      winner,
-      gameOver,
-    });
+      const winner = checkWinner(newBoard);
+      const gameOver = isGameOver(newBoard);
 
-    // Stop if game is over
-    if (gameOver) return;
+      set({
+        board: newBoard,
+        currentPlayer: 'O', // AI always plays 'O'
+        winner,
+        gameOver,
+      });
+
+      if (state.gameOver) return;
+    }
+
+
+
+
 
     // AI's move
     try {
@@ -127,16 +128,24 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
   },
 
-
   resetGame: () => {
+    // Alternate first player
+    firstPlayer = firstPlayer === "X" ? "O" : "X";
+
+
     set({
       board: [['', '', ''], ['', '', ''], ['', '', '']],
-      currentPlayer: 'X',
+      currentPlayer: firstPlayer,
       gameOver: false,
       winner: null,
     });
+    const state = get();
+    if (firstPlayer === "O" && state.gameMode == 'AI') {
+      console.log("Ai to move")
+
+      state.makeMoveWithAI(10, 10); // Example: AI starts with the first move
+    }
+
   },
 }));
-
-
-
+// you are here 17/01/2025 20:52 - switch first player in AI mode

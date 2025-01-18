@@ -12,37 +12,39 @@ const Game: React.FC = () => {
   const { updateGame, resetGame } = useGameStore();
 
   useEffect(() => {
-    const handleRoomCreated = (data: { message: string; first_player: string }) => {
-      alert(data.message);
-    };
 
     const handleRoomJoined = (data: { message: string }) => {
-      alert(data.message);
+      console.log('Room joined:', data);
+
     };
 
     const handleUpdateGame = (data: {
-      board: [['O', '', ''], ['', '', ''], ['', '', '']];
+      board: [['', '', ''], ['', '', ''], ['', '', '']];
       current_player: string;
       terminal?: boolean;
       winner?: string;
     }) => {
+      console.log('Game updated:', data);
       updateGame(data);
     };
 
+
     const handleGameStarted = (data: { message: string }) => {
+      console.log("game start message");
       alert(data.message);
     };
 
     const handleResetGame = (data: { message: string; first_player: string }) => {
+      console.log("reset game");
       alert(data.message);
       resetGame();
     };
 
     const handleError = (data: { message: string }) => {
-      alert(data.message);
+      alert("Error unaccepted: " + data.message);
     };
 
-    socket.on('room_created', handleRoomCreated);
+
     socket.on('room_joined', handleRoomJoined);
     socket.on('update_game', handleUpdateGame);
     socket.on('game_started', handleGameStarted);
@@ -50,7 +52,7 @@ const Game: React.FC = () => {
     socket.on('error', handleError);
 
     return () => {
-      socket.off('room_created', handleRoomCreated);
+      socket.off('room_created', handleRoomJoined);
       socket.off('room_joined', handleRoomJoined);
       socket.off('update_game', handleUpdateGame);
       socket.off('game_started', handleGameStarted);

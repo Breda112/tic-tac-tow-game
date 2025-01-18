@@ -2,9 +2,11 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
-import { createRoom } from '../lib/socket';
+import { createRoom, socket } from '../lib/socket';
 
 const CreateRoom: React.FC = () => {
+
+  
   const navigate = useNavigate();
   const { username, roomId, setUsername, setRoomId } = useGameStore();
 
@@ -17,8 +19,20 @@ const CreateRoom: React.FC = () => {
       alert('Please enter a room ID');
       return;
     }
+
+    // Emit the create_room event
     createRoom(roomId, username);
-    navigate('/game');
+
+    // Listen for the room_created event
+    socket.on('room_created', () => {
+      navigate('/game'); // Navigate to the game page
+    });
+
+    // Listen for errors
+    socket.on('room_token', () => {
+      alert('This room is already token');
+      return;
+    });
   };
 
   return (
@@ -34,7 +48,7 @@ const CreateRoom: React.FC = () => {
 
         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8">
           <h2 className="text-2xl font-bold text-white mb-6">Create Room</h2>
-          
+
           <div className="space-y-6">
             <div>
               <label className="block text-white text-sm font-medium mb-2">

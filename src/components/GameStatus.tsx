@@ -7,13 +7,11 @@ const GameStatus: React.FC = () => {
   const { currentPlayer, gameOver, winner, roomId, gameMode, resetGame } = useGameStore();
 
   const handleReset = () => {
-    if (gameMode == 'offline') {
-      resetGame
+    if (gameMode == 'offline' || gameMode == 'AI') {
+      resetGame()
     }
     else {
-
       resetFromServer(roomId);
-      resetGame;
     }
     ;
   };
