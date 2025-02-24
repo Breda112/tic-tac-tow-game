@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { checkWinner, isGameOver } from '../lib/gameLogic';
 import axios from 'axios';
 
-const AI_API_URL = 'http://127.0.0.1:5000/api';
+const AI_API_URL = 'http://127.0.0.1:5000';
 
 type Cell = string;
 type Board = Cell[][];
