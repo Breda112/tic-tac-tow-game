@@ -1,151 +1,129 @@
 import { create } from 'zustand';
-import { checkWinner, isGameOver } from '../lib/gameLogic';
 import axios from 'axios';
+import { devtools } from 'zustand/middleware';
 
 const AI_API_URL = 'http://127.0.0.1:5000';
 
-type Cell = string;
+type Player = 'X' | 'O';
+type Cell = Player | null;
 type Board = Cell[][];
-type Player = string;
-export type GameMode = 'offline' | 'online' | 'AI' | null;
 
 interface GameState {
-  gameMode: GameMode;
   board: Board;
   currentPlayer: Player;
   gameOver: boolean;
-  winner: Player | null;
-  username: string;
-  roomId: string;
-  setUsername: (username: string) => void;
-  setGameMode: (mode: GameMode) => void;
-  setRoomId: (roomId: string) => void;
-  makeMove: (row: number, col: number) => void;
-  makeMoveWithAI: (row: number, col: number) => void;
-  updateGame: (data: {
-    board: Board;
-    current_player: Player;
-    terminal?: boolean;
-    winner?: Player | null;
-  }) => void;
-  resetGame: () => void;
+  winner: Player | 'Draw' | null;
+  isAIBattleMode: boolean;
+  battleInProgress: boolean;
+  player1Moves: number[];
+  player2Moves: number[];
+  startAIBattle: () => void;
 }
 
-const initialBoard: Board = [['', '', ''], ['', '', ''], ['', '', '']];
+const WINNING_COMBINATIONS = [
+  [[0, 0], [0, 1], [0, 2]], // Rows
+  [[1, 0], [1, 1], [1, 2]],
+  [[2, 0], [2, 1], [2, 2]],
+  [[0, 0], [1, 0], [2, 0]], // Columns
+  [[0, 1], [1, 1], [2, 1]],
+  [[0, 2], [1, 2], [2, 2]],
+  [[0, 0], [1, 1], [2, 2]], // Diagonals
+  [[0, 2], [1, 1], [2, 0]]
+];
 
-// Track the first player alternately across sessions
-let firstPlayer: Player = "X";
+const MOVE_DELAY = 500; // Delay between moves in milliseconds
 
-export const useGameStore = create<GameState>((set, get) => ({
-  board: initialBoard,
-  currentPlayer: firstPlayer,
-  gameMode: null,
+const initialState: Pick<GameState, 'board' | 'currentPlayer' | 'gameOver' | 'winner' | 'isAIBattleMode' | 'battleInProgress' | 'player1Moves' | 'player2Moves'> = {
+  board: Array(3).fill(null).map(() => Array(3).fill(null)),
+  currentPlayer: 'X',
   gameOver: false,
   winner: null,
-  username: '',
-  roomId: '',
+  isAIBattleMode: true,
+  battleInProgress: false,
+  player1Moves: [],
+  player2Moves: []
+};
 
-  setGameMode: (mode) => set({ gameMode: mode }),
-  setUsername: (username) => set({ username }),
-  setRoomId: (roomId) => set({ roomId }),
-
-  updateGame: (data) => {
-    set({
-      board: data.board,
-      currentPlayer: data.current_player,
-      gameOver: data.terminal || false,
-      winner: data.winner || null,
-    });
-  },
-
-  makeMove: (row, col) =>
-
-    set((state) => {
-      if (state.board[row][col] !== '' || state.gameOver) return state;
-
-      const newBoard = state.board.map((r) => [...r]);
-      newBoard[row][col] = state.currentPlayer;
-
-      const winner = checkWinner(newBoard);
-      const gameOver = isGameOver(newBoard);
-
-      return {
-        board: newBoard,
-        currentPlayer: state.currentPlayer === 'X' ? 'O' : 'X',
-        winner,
-        gameOver,
-      };
-    }),
-
-  makeMoveWithAI: async (row: number, col: number) => {
-    const state = get();
-    const newBoard = state.board.map((r) => [...r]);
-
-    if (row < 10 || col < 10) {
-      newBoard[row][col] = state.currentPlayer;
-
-      const winner = checkWinner(newBoard);
-      const gameOver = isGameOver(newBoard);
-
-      set({
-        board: newBoard,
-        currentPlayer: 'O', // AI always plays 'O'
-        winner,
-        gameOver,
-      });
-
-      if (state.gameOver) return;
-    }
-
-
-
-
-
-    // AI's move
-    try {
-      const response = await axios.post(`${AI_API_URL}/minimax`, {
-        board: newBoard,
-      });
-
-      const bestMove = response.data.action;
-      if (bestMove) {
-        const [aiRow, aiCol] = bestMove;
-        const updatedBoard = get().board.map((r) => [...r]);
-        updatedBoard[aiRow][aiCol] = 'O';
-
-        const aiWinner = checkWinner(updatedBoard);
-        const aiGameOver = isGameOver(updatedBoard);
-
-        set({
-          board: updatedBoard,
-          currentPlayer: 'X',
-          winner: aiWinner,
-          gameOver: aiGameOver,
-        });
-      }
-    } catch (error) {
-      console.error('Failed to fetch AI move:', error);
-    }
-  },
-
-  resetGame: () => {
-    // Alternate first player
-    firstPlayer = firstPlayer === "X" ? "O" : "X";
-
-
-    set({
-      board: [['', '', ''], ['', '', ''], ['', '', '']],
-      currentPlayer: firstPlayer,
+export const useGameStore = create<GameState>()(devtools((set, get) => ({
+  ...initialState,
+  startAIBattle: async () => {
+    set(state => ({
+      board: Array(3).fill(null).map(() => Array(3).fill(null)),
+      currentPlayer: 'X',
       gameOver: false,
       winner: null,
-    });
-    const state = get();
-    if (firstPlayer === "O" && state.gameMode == 'AI') {
-      console.log("Ai to move")
+      isAIBattleMode: true,
+      battleInProgress: true,
+      player1Moves: [],
+      player2Moves: []
+    }));
 
-      state.makeMoveWithAI(10, 10); // Example: AI starts with the first move
+    while (!get().gameOver) {
+      const startTime = performance.now();
+      
+      const endpoint = get().currentPlayer === 'X' ? 'minimax1' : 'minimax2';
+      
+      try {
+        const response = await axios.post(`${AI_API_URL}/${endpoint}`, {
+          board: get().board,
+          player: get().currentPlayer as string
+        });
+
+        const bestMove = response.data.action;
+        if (bestMove) {
+          const [row, col] = bestMove;
+          const newBoard: Board = JSON.parse(JSON.stringify(get().board));
+          newBoard[row][col] = get().currentPlayer;
+
+          let gameOver = false;
+          let winner: Player | 'Draw' | null = null;
+
+          for (const combination of WINNING_COMBINATIONS) {
+            const [a, b, c] = combination;
+            if (
+              newBoard[a[0]][a[1]] &&
+              newBoard[a[0]][a[1]] === newBoard[b[0]][b[1]] &&
+              newBoard[a[0]][a[1]] === newBoard[c[0]][c[1]]
+            ) {
+              gameOver = true;
+              winner = get().currentPlayer as Player;
+              break;
+            }
+          }
+
+          // Check for draw
+          if (!gameOver && newBoard.every(row => row.every(cell => cell !== null))) {
+            gameOver = true;
+            winner = 'Draw';
+          }
+
+          const endTime = performance.now();
+          const moveTime = Math.round(endTime - startTime);
+
+          set({
+            board: newBoard,
+            currentPlayer: get().currentPlayer === 'X' ? 'O' : 'X' as Player,
+            gameOver,
+            winner,
+            isAIBattleMode: true,
+            battleInProgress: true,
+            player1Moves: get().currentPlayer === 'X' 
+              ? [...get().player1Moves, moveTime]
+              : get().player1Moves,
+            player2Moves: get().currentPlayer === 'O'
+              ? [...get().player2Moves, moveTime]
+              : get().player2Moves
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch AI move:', error);
+        set(state => ({ ...state, gameOver: true, battleInProgress: false }));
+        return;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, MOVE_DELAY));
     }
 
-  },
-}));
-// you are here 17/01/2025 20:52 - switch first player in AI mode
+    set(state => ({ ...state, battleInProgress: false, gameOver: true }));
+  }
+})));
