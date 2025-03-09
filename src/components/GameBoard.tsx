@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Home, RotateCcw } from 'lucide-react';
+import { Home, RotateCcw, Brain } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
 import { makeMove as makeOnlineMove, resetGame as resetOnlineGame } from '../lib/socket';
 import { cn } from '../lib/utils';
@@ -7,101 +7,92 @@ import { cn } from '../lib/utils';
 
 
 const GameBoard = () => {
-  const navigate = useNavigate();
   const {
     board,
-    username,
-    roomId,
     gameOver,
-    gameMode,
     currentPlayer,
     winner,
-    makeMove, // Offline mode move function
-    resetGame,
-    makeMoveWithAI
+    startAIBattle,
+    player1Moves,
+    player2Moves,
+    isAIBattleMode,
+    battleInProgress
   } = useGameStore();
 
-  const handleResetGame = () => {
-    if (gameMode == 'online') resetOnlineGame(roomId);
-
-    else resetGame();
-  }
-
-
-  const handleCellClick = (i: number, j: number) => {
-
-    if (gameOver || (!username && gameMode === 'online')) return;
-
-    if (gameMode === 'online') {
-      if (!username) return;
-      makeOnlineMove(roomId, username, [i, j]);
-    } else if (gameMode === 'AI') {
-      makeMoveWithAI(i, j); // Use AI-specific function
-    } else {
-      makeMove(i, j);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center text-white hover:text-blue-300 transition-colors"
-          >
-            <Home className="w-6 h-6 mr-2" />
-            Dashboard
-          </button>
-          {gameOver && (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900">
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-[300px_1fr_300px] gap-8">
+          {/* Player 1 Panel */}
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Brain className="w-6 h-6 text-blue-400" />
+              <h2 className="text-xl font-bold text-white">AI Player 1</h2>
+            </div>
+            <div className="h-[400px] overflow-y-auto">
+              {player1Moves.map((move, index) => (
+                <div key={index} className="text-blue-200 mb-2 p-2 bg-white/5 rounded">
+                  Move #{index + 1}: {move}ms
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Game Board */}
+          <div className="flex flex-col items-center">
+            <div className="text-center mb-8">
+              <h1 className="text-4xl font-bold text-white mb-4">AI Battle Mode</h1>
+              {gameOver ? (
+                <p className="text-2xl text-blue-200">
+                  {winner ? `${winner} Wins!` : "It's a Draw!"}
+                </p>
+              ) : (
+                <p className="text-xl text-blue-200">
+                  {battleInProgress ? `Current Player: ${currentPlayer}` : 'Ready to Battle'}
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 mb-8">
+              {board.map((row, i) =>
+                row.map((cell, j) => (
+                  <div
+                    key={`${i}-${j}`}
+                    className={`h-24 w-24 bg-white/5 backdrop-blur-sm rounded-lg
+                      flex items-center justify-center text-4xl font-bold
+                      ${cell === 'X' ? 'text-blue-400' : 'text-red-400'}`}
+                  >
+                    {cell}
+                  </div>
+                ))
+              )}
+            </div>
+
             <button
-              onClick={handleResetGame}
-              className="flex items-center text-white hover:text-blue-300 transition-colors"
+              onClick={startAIBattle}
+              disabled={battleInProgress}
+              className="px-8 py-4 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-800
+                text-white font-bold rounded-lg shadow-lg transition-colors
+                disabled:cursor-not-allowed"
             >
-              <RotateCcw className="w-6 h-6 mr-2" />
-              Play Again
+              {battleInProgress ? 'Battle in Progress...' : 'Start AI Battle'}
             </button>
-          )}
-        </div>
+          </div>
 
-        {/* Status Display */}
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-white">
-            {gameMode === 'online' ? 'Online Game' : 'Local Game'}
-          </h2>
-          {gameOver ? (
-            <p className="text-xl text-blue-200 mt-4">
-              {winner ? `${winner} Wins!` : "It's a Draw!"}
-            </p>
-          ) : (
-            <p className="text-lg text-blue-200 mt-2">
-              Current Player: {currentPlayer}
-            </p>
-          )}
-        </div>
-
-        {/* Game Board */}
-        <div className="grid grid-cols-3 gap-4 max-w-md mx-auto">
-          {board.map((row, i) =>
-            row.map((cell, j) => (
-              <button
-                key={`${i}-${j}`}
-                onClick={() => handleCellClick(i, j)}
-                className={cn(
-                  "h-24 bg-white/5 backdrop-blur-sm rounded-lg",
-                  "flex items-center justify-center text-4xl font-bold",
-                  "transition-all duration-200",
-                  "hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-blue-400",
-                  "disabled:cursor-not-allowed disabled:hover:bg-white/5",
-                  cell === 'X' ? 'text-blue-400' : 'text-red-400'
-                )}
-                disabled={!!cell || gameOver}
-              >
-                {cell}
-              </button>
-            ))
-          )}
+          {/* Player 2 Panel */}
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Brain className="w-6 h-6 text-red-400" />
+              <h2 className="text-xl font-bold text-white">AI Player 2</h2>
+            </div>
+            <div className="h-[400px] overflow-y-auto">
+              {player2Moves.map((move, index) => (
+                <div key={index} className="text-red-200 mb-2 p-2 bg-white/5 rounded">
+                  Move #{index + 1}: {move}ms
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
