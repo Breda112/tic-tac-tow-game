@@ -34,7 +34,7 @@ const WINNING_COMBINATIONS = [
 const MOVE_DELAY = 500; // Delay between moves in milliseconds
 
 const initialState: Pick<GameState, 'board' | 'currentPlayer' | 'gameOver' | 'winner' | 'isAIBattleMode' | 'battleInProgress' | 'player1Moves' | 'player2Moves'> = {
-  board: Array(3).fill(null).map(() => Array(3).fill(null)),
+  board: Array(3).fill('').map(() => Array(3).fill('')),
   currentPlayer: 'X',
   gameOver: false,
   winner: null,
@@ -48,7 +48,7 @@ export const useGameStore = create<GameState>()(devtools((set, get) => ({
   ...initialState,
   startAIBattle: async () => {
     set(state => ({
-      board: Array(3).fill(null).map(() => Array(3).fill(null)),
+      board: Array(3).fill('').map(() => Array(3).fill('')),
       currentPlayer: 'X',
       gameOver: false,
       winner: null,
@@ -60,12 +60,12 @@ export const useGameStore = create<GameState>()(devtools((set, get) => ({
 
     while (!get().gameOver) {
       const startTime = performance.now();
-      
+
       const endpoint = get().currentPlayer === 'X' ? 'minimax1' : 'minimax2';
-      
+
       try {
         const response = await axios.post(`${AI_API_URL}/${endpoint}`, {
-          board: get().board,
+          board: get().board.map(row => row.map(cell => cell || '')),
           player: get().currentPlayer as string
         });
 
@@ -92,7 +92,7 @@ export const useGameStore = create<GameState>()(devtools((set, get) => ({
           }
 
           // Check for draw
-          if (!gameOver && newBoard.every(row => row.every(cell => cell !== null))) {
+          if (!gameOver && newBoard.every(row => row.every(cell => cell !== ''))) {
             gameOver = true;
             winner = 'Draw';
           }
@@ -107,7 +107,7 @@ export const useGameStore = create<GameState>()(devtools((set, get) => ({
             winner,
             isAIBattleMode: true,
             battleInProgress: true,
-            player1Moves: get().currentPlayer === 'X' 
+            player1Moves: get().currentPlayer === 'X'
               ? [...get().player1Moves, moveTime]
               : get().player1Moves,
             player2Moves: get().currentPlayer === 'O'
