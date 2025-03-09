@@ -16,7 +16,14 @@ EMPTY = ""
 # ]
 #
 # board can take 3 values (X,O,EMPTY)
-def minimax(board, player):
+def minimax1(board, player):
+
+        # Return list contain 2 values (column, row)
+        # Example:
+        return [1,1]
+
+
+def minimax2(board, player):
 
         # Return list contain 2 values (column, row)
         # Example:
