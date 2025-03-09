@@ -97,8 +97,8 @@ const Dashboard: React.FC = () => {
             title="عكاشه"
             description="Play with عكاشه the most powerful AI player"
             onClick={() => {
-              setGameMode('AI')
-              resetGame()
+              //setGameMode('AI')
+              //resetGame()
               navigate('/game')
             }}
           />
